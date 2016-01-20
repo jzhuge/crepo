@@ -2,6 +2,7 @@
 # (c) Copyright 2010 Cloudera, Inc.
 import logging
 import os
+import pwd
 import re
 try:
   import simplejson
@@ -13,6 +14,7 @@ from git_command import GitCommand
 from git_repo import GitRepo
 import trace
 
+__REMOTE_USER__ = os.environ.get("CREPO_REMOTE_USER", pwd.getpwuid(os.getuid())[0])
 
 class Manifest(object):
   def __init__(self,
@@ -308,7 +310,10 @@ class Project(object):
       return
     logging.warn("Initializing project: %s" % self.name)
     clone_remote = self.manifest.remotes[self.from_remote]
-    clone_url = clone_remote.fetch % {"name": self.remote_project_name}
+    clone_url = clone_remote.fetch % {
+      "name": self.remote_project_name,
+      "user": __REMOTE_USER__
+    }
     p = GitCommand(["clone", "-o", self.from_remote, "-n", clone_url, self.dir])
     p.Wait()
 
@@ -326,7 +331,10 @@ class Project(object):
     repo = self.git_repo
     for remote_name in self.remotes:
       remote = self.manifest.remotes[remote_name]
-      new_url = remote.fetch % { "name": self.remote_project_name }
+      new_url = remote.fetch % {
+        "name": self.remote_project_name,
+        "user": __REMOTE_USER__
+      }
 
       p = repo.command_process(["config", "--get", "remote.%s.url" % remote_name],
                                capture_stdout=True)
